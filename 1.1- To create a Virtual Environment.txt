@@ -1,0 +1,12 @@
+1- Open the terminal in the directory you want to create a virtual environment in.
+2- Type: py -m venv <name_of_your_environment>
+3- Type: <name_of_your_environment>\Scripts\activate.bat
+
+Once that done, anytime you will open the terminal the environment will be activated, if not activate it using command 3.
+
+Now, you can install any library you want, and it will be exclusively used in this project and will not conflict with the global interpreter.
+
+**Note**
+
+Always use this to update pip, it's not necessary but nice.
+py -m pip install --upgrade pip

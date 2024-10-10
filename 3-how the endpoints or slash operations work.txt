@@ -1,0 +1,45 @@
+if you define the app and want to define an api endpoint, for example, a link that directs the user to the login portal:
+
+@app.get('/login'):
+def login():
+	return {'anything you want the user to see when they login'}
+
+let's say someone want to get all the users posts:
+
+dummy_users_posts = [
+    "Like, FR, Why is pizza at this place so damn expensive? It's not even that good",
+    "Bro's hit the rock bottom",
+    "I need to get married",
+    "This is too personal, I don't like the way my data is used!"
+]
+
+@app.get('/posts')
+def get_posts():
+    return {
+            "Posts": {user:post for user,post in enumerate(dummy_users_posts)}
+    }
+
+This means you will need to type the root/posts
+and they will see the following:
+{
+    "Posts": {
+        "0": "Like, FR, Why is pizza at this place so damn expensive? It's not even that good",
+        "1": "Bro's hit the rock bottom",
+        "2": "I need to get married",
+        "3": "This is too personal, I don't like the way my data is used!"
+    }
+}
+
+
+**IMPORTANT NOTE**
+
+FastAPI searches for the endpoits or the slashes in the order they are written to not run the entire program for no reason.
+it searches by two keys: 1- the endpoin (/login); If it finds two login endpoints it looks for: 2- the type of http request (get,post....etc) if the two login endpoints are the same http request type, it just picks the first one.
+
+
+** IMPORTANT NOTE**
+When you want to create an end point, you have to name it in plural, like this:
+/post/... X
+/posts/... Correct
+/user/... X
+/users/... Correct
