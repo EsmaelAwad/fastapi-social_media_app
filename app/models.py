@@ -126,3 +126,7 @@ def verify_post_owner(
     # Compare the post owner's email to the current user's email
     if not post_owner_email == current_user_email:
         raise HTTPException(403, detail=f'The post is owned by {post_owner_email}, {current_user_email} is not authorized to {method} it.')
+
+class Vote(BaseModel):
+    id_: int 
+    direction_of_vote: int 

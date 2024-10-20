@@ -119,3 +119,26 @@ cursor.execute(create_table_query)
 connection.commit()
 connection.close()
 
+
+# Connect to PostgreSQL server (to the default 'postgres' database)
+connection, cursor = FastApiDatabaseConnector()
+
+# Create a new table for post likes
+create_table_query = """
+CREATE TABLE IF NOT EXISTS post_likes (
+    post_id INT NOT NULL,               -- The ID of the post being liked
+    email VARCHAR(255) NOT NULL,               -- The email of the user who liked the post
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the like was created
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the like was last updated
+    current_status INT NOT NULL DEFAULT 0,          -- What is the status of the post for that user, like 1, dislike -1 , netural 0
+    PRIMARY KEY (post_id, email),     -- Composite primary key: post_id + user_id
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,  -- Foreign key constraint on posts
+    FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE   -- Foreign key constraint on users
+)
+"""
+
+cursor.execute(create_table_query)
+connection.commit()
+connection.close()
+
+

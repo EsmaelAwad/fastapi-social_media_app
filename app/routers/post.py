@@ -1,5 +1,5 @@
-from app.database_functions import FastApiDatabaseConnector, DropPost, UpdatePost,  insert_dataframe_to_table, read_table
-from app.models import Post, verify_post_owner
+from app.database_functions import FastApiDatabaseConnector, DropPost, UpdatePost, VoteManager,  insert_dataframe_to_table, read_table
+from app.models import Post, verify_post_owner, Vote 
 import pandas as pd
 from fastapi import Depends, HTTPException, Response, status, APIRouter
 from app.routers.oauth2 import decode_access_token
@@ -258,3 +258,79 @@ def update_post(id: int, post: Post, token_data: dict = Depends(decode_access_to
     verify_post_owner(id, token_data.get('user_email'), method='update')
     message = UpdatePost(id, post.model_dump(), connection)
     return {'Message': message}
+
+@router.post('/posts/like-post/{id}')
+def like_post(vote: Vote, token_data: dict = Depends(decode_access_token)):
+    """
+    Like, dislike, or neutralize a post by its ID.
+
+    This endpoint allows users to vote on a specific post by liking, disliking, or neutralizing their vote.
+    The user's action is based on the provided direction of vote (-1 for dislike, 0 for neutral, and 1 for like).
+    The user's email is extracted from the JWT token via the 'decode_access_token' dependency.
+
+    Parameters:
+    - **vote** (`Vote`): The vote object containing `direction_of_vote` (-1, 0, or 1) and `id_` (the post ID).
+    - **token_data** (`dict`, optional): Contains the user's email and other details from the JWT token, extracted via the 'decode_access_token' dependency.
+
+    Returns:
+    - A JSON response confirming the vote change or raising an error if the vote is invalid.
+
+    HTTP Exceptions:
+    - **401 Unauthorized**: If the `direction_of_vote` is not valid (-1, 0, 1).
+    - **404 Not Found**: If the post with the provided ID is not found in the `post_likes` table.
+
+    Example Usage:
+    ```bash
+    curl -X 'POST' \
+      'http://localhost:8000/posts/like-post/1' \
+      -H 'Authorization: Bearer <your_token>' \
+      -d '{"direction_of_vote": 1, "id_": 1}'
+    ```
+
+    Expected Responses:
+    - **200 OK**: If the vote was successfully updated or inserted, returns a confirmation message.
+    - **404 Not Found**: If the post ID is invalid or the user does not have any interaction with the post.
+    """
+    direction_of_vote = vote.direction_of_vote
+    id_ = vote.id_
+
+    # Validate direction_of_vote
+    if direction_of_vote not in (-1, 0, 1):
+        raise HTTPException(status_code=401, detail='Forbidden, user can only like, dislike, or neutralize.')
+
+    # Check if the user has already interacted with this post
+    user_post_like_status = read_table('''
+        SELECT 
+            post_id,
+            email,
+            current_status
+        FROM post_likes 
+        WHERE post_id = :id AND email = :email
+        ''', params={'id': id_, 'email': token_data.get('user_email')})
+
+    # If the post does not exist for the user, raise an exception
+    if user_post_like_status is None:
+        raise HTTPException(status_code=404, detail='Post not found or user has no previous interaction with this post.')
+
+    # Prepare data for the VoteManager
+    data = {'post_id': id_, 'email': token_data.get('user_email')}
+
+    # Case 1: New vote interaction
+    if user_post_like_status.empty:
+        VoteManager(data=data, method='add_new_vote', current_status=1, connection=connection)
+    
+    # Case 2: Update existing interaction
+    else:
+        user_last_choice = user_post_like_status.current_status[0]
+
+        # Update the database based on the vote direction
+        if direction_of_vote >= 0:
+            VoteManager(data=data, method='update_vote', current_status=direction_of_vote, connection=connection)
+        
+        # If the vote is -1 (dislike), apply the appropriate logic
+        elif direction_of_vote == -1:
+            absolute_last_choice = abs(user_last_choice)
+            current_status = absolute_last_choice + direction_of_vote
+            VoteManager(data=data, method='update_vote', current_status=int(current_status), connection=connection)
+
+    return {'Message': 'Vote successfully recorded.'}

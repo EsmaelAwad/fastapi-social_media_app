@@ -331,3 +331,82 @@ def AddColumnIfNotExists(table_name: str, column_name: str, column_type: str,
         # Close the connection if requested
         if close_connection:
             connection.close()
+
+def VoteManager(data: dict, method: str = 'add_new_vote', 
+                current_status: int = 1,connection=None, 
+                close_connection: bool = False):
+    """
+    Manages votes for posts by adding or updating a vote record in the 'post_likes' table.
+
+    This function can either add a new vote or update an existing vote based on the provided `method`.
+    The `post_likes` table contains information about post likes and the status of the vote (e.g., liked, disliked, or neutral).
+
+    Args:
+        data (dict): A dictionary containing the following required keys:
+                     - 'post_id' (int): The ID of the post being voted on.
+                     - 'email' (str): The email of the user casting the vote.
+        method (str): Determines whether to add a new vote or update an existing one.
+                      Options: 'add_new_vote' (default), 'update_vote'.
+        current_status (int): The status of the vote. Typically -1 (dislike), 0 (neutral), or 1 (like). Default is 1.
+        connection: A psycopg2 connection object to the database.
+        close_connection (bool): Whether to close the connection after the operation. Default is False.
+    
+    Returns:
+        str: A message indicating the result of the operation (success or failure).
+    
+    Raises:
+        Exception: For any database-related errors.
+    
+    Usage Examples:
+    
+    1. Adding a new vote:
+    
+        data = {"post_id": 1, "email": "user@example.com"}
+        VoteManager(data, method='add_new_vote', current_status=1, connection=conn)
+
+    2. Updating an existing vote:
+    
+        data = {"post_id": 1, "email": "user@example.com"}
+        VoteManager(data, method='update_vote', current_status=-1, connection=conn)
+    """
+    
+    try:
+        # Get the user_id based on the email provided in the data
+        cursor = connection.cursor()
+        
+        user_id = data['email']
+
+        # Adding a new vote
+        if method == 'add_new_vote':
+            # Insert new vote
+            insert_vote_query = """
+            INSERT INTO post_likes (post_id, email, current_status, created_at, updated_at)
+            VALUES (%s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """
+            cursor.execute(insert_vote_query, (data['post_id'], user_id, current_status))
+            connection.commit()
+            return "New vote added successfully."
+        
+        # Updating an existing vote
+        elif method == 'update_vote':
+
+            # Update existing vote
+            update_vote_query = """
+            UPDATE post_likes
+            SET current_status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE post_id = %s AND email = %s
+            """
+            cursor.execute(update_vote_query, (current_status, data['post_id'], user_id))
+            connection.commit()
+            return "Vote updated successfully."
+        
+        else:
+            return "Invalid method. Use 'add_new_vote' or 'update_vote'."
+    
+    except Exception as e:
+        print(f"An error occurred while managing the vote: {e}")
+        raise
+    finally:
+        # Close the connection if requested
+        if close_connection and connection is not None:
+            connection.close()
