@@ -332,5 +332,17 @@ def like_post(vote: Vote, token_data: dict = Depends(decode_access_token)):
             absolute_last_choice = abs(user_last_choice)
             current_status = absolute_last_choice + direction_of_vote
             VoteManager(data=data, method='update_vote', current_status=int(current_status), connection=connection)
+    post_likes_query = """
+  SELECT 
+    SUM(CASE WHEN current_status > 0 THEN 1 ELSE 0 END) as total_likes,
+    SUM(CASE WHEN current_status = -1 THEN 1 ELSE 0 END) as total_negative_votes,
+    COUNT(current_status) as total_interactions
+  FROM posts p 
+  JOIN post_likes pl ON pl.post_id = p.id
+"""
+    post_likes = read_table(post_likes_query, conn=connection)
+    return {'Message': 'Vote successfully recorded.',
+            'total_likes': int(post_likes['total_likes'].iloc[0]),
+            'total_negative_votes': int(post_likes['total_negative_votes'].iloc[0]),
+            'total_interactions': int(post_likes['total_interactions'].iloc[0])}
 
-    return {'Message': 'Vote successfully recorded.'}
