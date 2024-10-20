@@ -289,6 +289,10 @@ def like_post(vote: Vote, token_data: dict = Depends(decode_access_token)):
 
     Expected Responses:
     - **200 OK**: If the vote was successfully updated or inserted, returns a confirmation message.
+    - **Keys if response is OK**:
+      - total_likes: This should be used to indicate how many overall likes in a post.
+      - total_negative_votes
+      - total_interactions
     - **404 Not Found**: If the post ID is invalid or the user does not have any interaction with the post.
     """
     direction_of_vote = vote.direction_of_vote
